@@ -1,14 +1,14 @@
 # Anatomy of a STARK, Part 4: The STARK Polynomial IOP
 
-This part of the tutorial deals with the information-theoretic backbone of the STARK proof system, which you might call the STARK Polynomial IOP. Recall that the compilation pipeline of SNARKs involves intermediate stages, the first two of which are the *arithmetic constraint system* and the *Polynomial IOP*. This tutorial does describe the properties of the arithmetic constraint system. However, a discussion about the *arithmetization* step, which transforms the initial computation into an arithmetic constraint system, is out of scope. The *interpolation* step, which transforms this arithmetic constraint system into a Polynomial IOP, is discussed at length. The final Polynomial IOP can be compiled into a concrete proof system using the FRI-based compiler described in [part 3](fri).
+This part of the tutorial deals with the information-theoretic backbone of the STARK proof system, which you might call the STARK Polynomial IOP. Recall that the compilation pipeline of SNARKs involves intermediate stages, the first two of which are the _arithmetic constraint system_ and the _Polynomial IOP_. This tutorial does describe the properties of the arithmetic constraint system. However, a discussion about the _arithmetization_ step, which transforms the initial computation into an arithmetic constraint system, is out of scope. The _interpolation_ step, which transforms this arithmetic constraint system into a Polynomial IOP, is discussed at length. The final Polynomial IOP can be compiled into a concrete proof system using the FRI-based compiler described in [part 3](fri).
 
 ## Arithmetic Intermediate Representation (AIR)
 
-The *arithmetic intermediate representation (AIR)* (also, arithmetic *internal* representation) is a way of describing a computation in terms of an execution trace that satisfies a number of constraints induced by the correct evolution of the state. The term *arithmetic* refers to the fact that this execution trace consists of a list of finite field elements (or an array, if more than one register is involved), and that the constraints are expressible as low degree polynomials.
+The _arithmetic intermediate representation (AIR)_ (also, arithmetic _internal_ representation) is a way of describing a computation in terms of an execution trace that satisfies a number of constraints induced by the correct evolution of the state. The term _arithmetic_ refers to the fact that this execution trace consists of a list of finite field elements (or an array, if more than one register is involved), and that the constraints are expressible as low degree polynomials.
 
-Let's make this more concrete. Let $\mathbb{F}_p$ be the field of definition. Without loss of generality, the computation describes the evolution a *state* of $\mathsf{w}$ registers for $T$ cycles. The *algebraic execution trace (AET)* is the table of $T \times \mathsf{w}$ field elements where every row describes the state of the system at the given point in time, and every column tracks the value of the given register.
+Let's make this more concrete. Let $\mathbb{F}_p$ be the field of definition. Without loss of generality, the computation describes the evolution a _state_ of $\mathsf{w}$ registers for $T$ cycles. The _algebraic execution trace (AET)_ is the table of $T \times \mathsf{w}$ field elements where every row describes the state of the system at the given point in time, and every column tracks the value of the given register.
 
-A *state transition function*
+A _state transition function_
 
 $$f : \mathbb{F}_p^\mathsf{w} \rightarrow \mathbb{F}_p^\mathsf{w} $$
 
@@ -18,57 +18,67 @@ $$ \mathcal{B} : [\mathbb{Z}_T \times \mathbb{Z}_\mathsf{w} \times \mathbb{F}] $
 
 enforce the correct values of some or all registers at the first cycle, last cycle, or even at arbitrary cycles.
 
-The *computational integrity claim* consists of the state transition function and the boundary conditions. The *witness* to this claim is the algebraic execution trace. The claim is *true* if there is a witness $W \in \mathbb{G}^{T \times \mathsf{w}}$ such that:
- - for every cycle, the state evolves correctly: $\forall i \in \lbrace 0, \ldots, T-1 \rbrace \, . \, f(W_{[i,:]}) = W_{[i+1,:]}$; and
- - all boundary conditions are satisfied: $\forall (i, w, e) \in \mathcal{B} \, . \, W_{[i,w]} = e$.
+The _computational integrity claim_ consists of the state transition function and the boundary conditions. The _witness_ to this claim is the algebraic execution trace. The claim is _true_ if there is a witness $W \in \mathbb{G}^{T \times \mathsf{w}}$ such that:
 
-The state transition function hides a lot of complexity. For the purpose of STARKs, it needs to be describable as low degree polynomials that are *independent of the cycle*. However, this list of polynomials does not need to compute the next state from the current one; it merely needs to distinguish correct evolutions from incorrect ones. Specifically, the function
+- for every cycle, the state evolves correctly: $\forall i \in \lbrace 0, \ldots, T-1 \rbrace \, . \, f(W_{[i,:]}) = W_{[i+1,:]}$; and
+- all boundary conditions are satisfied: $\forall (i, w, e) \in \mathcal{B} \, . \, W_{[i,w]} = e$.
 
-$$ f : \mathbb{F}_p^\mathsf{w} \rightarrow \mathbb{F}_p^\mathsf{w} $$
+The state transition function hides a lot of complexity. For the purpose of STARKs, it needs to be describable as low degree polynomials that are _independent of the cycle_. However, this list of polynomials does not need to compute the next state from the current one; it merely needs to distinguish correct evolutions from incorrect ones. Specifically, the function
+
+$$ f : \mathbb{F}\_p^\mathsf{w} \rightarrow \mathbb{F}\_p^\mathsf{w} $$
 
 is represented by a list of polynomials $\mathbf{p}(X_0, \ldots, X_{\mathsf{w}-1}, Y_{0}, \ldots, Y_{ \mathsf{w}-1})$ such that $f(\mathbf{x}) = \mathbf{y}$ if and only if $\mathbf{p}(\mathbf{x}, \mathbf{y}) = \mathbf{0}$. Say there are $r$ such state transition verification polynomials. Then the transition constraints become:
- - $\forall i \in \lbrace 0, \ldots, T - 1 \rbrace \, . \, \forall j \in \lbrace 0, \ldots, r-1\rbrace \, . \, p_j(W_{[i,0]}, \ldots, W_{[i, \mathsf{w}-1]}, W_{[i+1,0]}, \ldots, W_{[i+1, \mathsf{w}-1]}) = 0$.
 
-This representation admits *non-determinism*, which has the capacity to reduce high degree state transition *computation* polynomials with low degree state transition *verification* polynomials. For example: the state transition function $f : \mathbb{F}_p \rightarrow \mathbb{F}_p$ given by $$ x \mapsto \left\lbrace  \begin{array}{l} x^{-1} & \Leftarrow x \neq 0 \\
-0 & \Leftarrow x = 0  \end{array} \right. $$ can be represented as a computation polynomial $f(x) = x^{p-2}$ or as a pair of verification polynomials $\mathbf{p}(x,y) = (x(xy-1), y(xy-1))$. The degree drops from $p-2$ to 3.
+- $\forall i \in \lbrace 0, \ldots, T - 1 \rbrace \, . \, \forall j \in \lbrace 0, \ldots, r-1\rbrace \, . \, p_j(W_{[i,0]}, \ldots, W_{[i, \mathsf{w}-1]}, W_{[i+1,0]}, \ldots, W_{[i+1, \mathsf{w}-1]}) = 0$.
 
-Not all lists of $\mathsf{w}$ represent valid states. For instance, some registers may be constrained to bits and thus take only values from $\lbrace 0, 1\rbrace$. The state transition function is what guarantees that the next state is well-formed if the current state is. When translating to verification polynomials, these *consistency constraints* are polynomials in the first half of variables only ($X_0, \ldots, X_{\mathsf{w}-1}$) because they apply to every single row in the AET, as opposed to every consecutive pair of rows. For the sake of simplicity, this tutorial will ignore consistency constraints and pretend as though every $\mathsf{w}$-tuple of field elements represents a valid state.
+This representation admits _non-determinism_, which has the capacity to reduce high degree state transition _computation_ polynomials with low degree state transition _verification_ polynomials. For example: the state transition function $f : \mathbb{F}_p \rightarrow \mathbb{F}_p$ given by
+
+$$ x \mapsto \left\lbrace  \begin{array}{l} x^{-1} & \Leftarrow x \neq 0 \\
+0 & \Leftarrow x = 0 \end{array} \right. $$
+
+can be represented as a computation polynomial $f(x) = x^{p-2}$ or as a pair of verification polynomials $\mathbf{p}(x,y) = (x(xy-1), y(xy-1))$. The degree drops from $p-2$ to 3.
+
+Not all lists of $\mathsf{w}$ represent valid states. For instance, some registers may be constrained to bits and thus take only values from $\lbrace 0, 1\rbrace$. The state transition function is what guarantees that the next state is well-formed if the current state is. When translating to verification polynomials, these _consistency constraints_ are polynomials in the first half of variables only ($X_0, \ldots, X_{\mathsf{w}-1}$) because they apply to every single row in the AET, as opposed to every consecutive pair of rows. For the sake of simplicity, this tutorial will ignore consistency constraints and pretend as though every $\mathsf{w}$-tuple of field elements represents a valid state.
 
 ## Interpolation
 
-The arithmetic constraint system described above already represents the computational integrity claim as a bunch of polynomials; each such polynomial corresponds to a constraint. Transforming this constraint system into a Polynomial IOP requires extending this representation in terms of polynomials to the witness and extending the notion of *valid* witnesses to *witness polynomials*. Specifically, we need to represent the conditions for true computational integrity claims in terms of identities of polynomials.
+The arithmetic constraint system described above already represents the computational integrity claim as a bunch of polynomials; each such polynomial corresponds to a constraint. Transforming this constraint system into a Polynomial IOP requires extending this representation in terms of polynomials to the witness and extending the notion of _valid_ witnesses to _witness polynomials_. Specifically, we need to represent the conditions for true computational integrity claims in terms of identities of polynomials.
 
-Let $D$ be a list of points referred to from here on out as the *trace evaluation domain*. Typically, $D$ is set to the span of a generator $\omicron$ of a subgroup of order $2^k \geq T+1$. So for the time being set $D = \lbrace \omicron^i \vert i \in \mathbb{Z}\rbrace$. The Greek letter $\omicron$ ("omicron") indicates that the trace evaluation domain is smaller than the FRI evaluation domain by a factor exactly equal to the expansion factor[^1].
+Let $D$ be a list of points referred to from here on out as the _trace evaluation domain_. Typically, $D$ is set to the span of a generator $\omicron$ of a subgroup of order $2^k \geq T+1$. So for the time being set $D = \lbrace \omicron^i \vert i \in \mathbb{Z}\rbrace$. The Greek letter $\omicron$ ("omicron") indicates that the trace evaluation domain is smaller than the FRI evaluation domain by a factor exactly equal to the expansion factor[^1].
 
-Let $\boldsymbol{t}(X) \in (\mathbb{F}_p[X])^\mathsf{w}$ be a list of $\mathsf{w}$ univariate polynomials that interpolate through $W$ on $D$. Specifically, the *trace polynomial* $t_w(X)$ for register $w$ is the univariate polynomial of lowest degree such that $\forall i \in \lbrace 0, \ldots, T\rbrace \, . \, t_w(\omicron^i) = W[i, w]$. The trace polynomials are a representation of the algebraic execution trace in terms of univariate polynomials.
+Let $\boldsymbol{t}(X) \in (\mathbb{F}_p[X])^\mathsf{w}$ be a list of $\mathsf{w}$ univariate polynomials that interpolate through $W$ on $D$. Specifically, the _trace polynomial_ $t_w(X)$ for register $w$ is the univariate polynomial of lowest degree such that $\forall i \in \lbrace 0, \ldots, T\rbrace \, . \, t_w(\omicron^i) = W[i, w]$. The trace polynomials are a representation of the algebraic execution trace in terms of univariate polynomials.
 
 Translating the conditions for true computational integrity claims to the trace polynomials, one gets:
- - all boundary constraints are satisfied: $\forall (i, w, e) \in \mathcal{B} \, . \, t_w(\omicron^i) = e$; and
- - for all cycles, all transition constraints are satisfied: $\forall i \in \lbrace 0, \ldots, T-1 \rbrace \, . \, \forall j \in \lbrace 0, \ldots, r-1 \rbrace \, . \, p_j( t_0(\omicron^i), \ldots, t_{\mathsf{w}-1}(\omicron^i), t_0(\omicron^{i+1}), \ldots, t_{\mathsf{w}-1}(\omicron^{i+1})) = 0$.
 
-The last expression looks complicated. However, observe that the left hand side of the equation corresponds to the univariate polynomial $p_j(t_0(X)), \ldots, t_{\mathsf{w}-1}(X), t_0(\omicron \cdot X), \ldots, t_{\mathsf{w}-1}(\omicron \cdot X))$. The entire expression simply says that all $r$ of these *transition polynomials* evaluate to 0 in $\lbrace  \omicron^i \vert i \in \mathbb{Z}_T\rbrace$.
+- all boundary constraints are satisfied: $\forall (i, w, e) \in \mathcal{B} \, . \, t_w(\omicron^i) = e$; and
+- for all cycles, all transition constraints are satisfied: $\forall i \in \lbrace 0, \ldots, T-1 \rbrace \, . \, \forall j \in \lbrace 0, \ldots, r-1 \rbrace \, . \, p_j( t_0(\omicron^i), \ldots, t_{\mathsf{w}-1}(\omicron^i), t_0(\omicron^{i+1}), \ldots, t_{\mathsf{w}-1}(\omicron^{i+1})) = 0$.
+
+The last expression looks complicated. However, observe that the left hand side of the equation corresponds to the univariate polynomial $p_j(t_0(X)), \ldots, t_{\mathsf{w}-1}(X), t_0(\omicron \cdot X), \ldots, t_{\mathsf{w}-1}(\omicron \cdot X))$. The entire expression simply says that all $r$ of these _transition polynomials_ evaluate to 0 in $\lbrace  \omicron^i \vert i \in \mathbb{Z}_T\rbrace$.
 
 This observation gives rise to the following high-level Polynomial IOP:
- 1. The prover commits to the trace polynomials $\boldsymbol{t}(X)$.
- 2. The verifier checks that $t_w(X)$ evaluates to $e$ in $\omicron^i$ for all $(i, w, e) \in \mathcal{B}$.
- 3. The prover commits to the transition polynomials $\mathbf{c}(X) = \mathbf{p}(t_0(X)), \ldots, t_{\mathsf{w}-1}(X), t_0(\omicron \cdot X), \ldots, t_{\mathsf{w}-1}(\omicron \cdot X))$.
- 4. The verifier checks that $\mathbf{c}(X)$ and $\boldsymbol{t}(X)$ are correctly related by:
-   - choosing a random point $z$ drawn uniformly from the field excluding the element 0,
-   - querying the values of $\boldsymbol{t}(X)$ in $z$ and $\omicron \cdot z$,
-   - evaluating the transition verification polynomials $\mathbf{p}(X_1, \ldots, X_{\mathsf{w}-1}, Y_0, \ldots, Y_{\mathsf{w}-1})$ in these $2\mathsf{w}$ points, and
-   - querying the values of $\mathbf{c}(X)$ in $z$,
-   - checking that the values obtained in the previous two steps match.
- 5. The verifier checks that the transition polynomials $\mathbf{c}(X)$ evaluate to zero in $\lbrace \omicron^i \vert i \in \lbrace 0, \ldots, T-1 \rbrace \rbrace$.
+
+1.  The prover commits to the trace polynomials $\boldsymbol{t}(X)$.
+2.  The verifier checks that $t_w(X)$ evaluates to $e$ in $\omicron^i$ for all $(i, w, e) \in \mathcal{B}$.
+3.  The prover commits to the transition polynomials $\mathbf{c}(X) = \mathbf{p}(t_0(X)), \ldots, t_{\mathsf{w}-1}(X), t_0(\omicron \cdot X), \ldots, t_{\mathsf{w}-1}(\omicron \cdot X))$.
+4.  The verifier checks that $\mathbf{c}(X)$ and $\boldsymbol{t}(X)$ are correctly related by:
+
+- choosing a random point $z$ drawn uniformly from the field excluding the element 0,
+- querying the values of $\boldsymbol{t}(X)$ in $z$ and $\omicron \cdot z$,
+- evaluating the transition verification polynomials $\mathbf{p}(X_1, \ldots, X_{\mathsf{w}-1}, Y_0, \ldots, Y_{\mathsf{w}-1})$ in these $2\mathsf{w}$ points, and
+- querying the values of $\mathbf{c}(X)$ in $z$,
+- checking that the values obtained in the previous two steps match.
+
+5.  The verifier checks that the transition polynomials $\mathbf{c}(X)$ evaluate to zero in $\lbrace \omicron^i \vert i \in \lbrace 0, \ldots, T-1 \rbrace \rbrace$.
 
 In fact, the commitment of the transition polynomials can be omitted. Instead, the verifier uses the evaluation of $\boldsymbol{t}(X)$ in $z$ and $\omicron \cdot z$ to compute the value of $\mathbf{c}(X)$ in the one point needed to verify that $\mathbf{c}(X)$ evaluates to 0 in $\lbrace  \omicron^i \vert i \in \lbrace 0, \ldots, T-1 \rbrace \rbrace$.
 
-There is another layer of redundancy, but it is only apparent after the evaluation checks are unrolled. The FRI compiler simulates an evaluation check by a) subtracting the y-coordinate, b) dividing out the zerofier, which is the minimal polynomial that vanishes at the x-coordinate, and c) proving that the resulting quotient has a bounded degree. This procedure happens twice for the STARK polynomials -- first: applied to the trace polynomials to show satisfaction of the boundary constraints, and second: applied to the transition polynomials to show that the transition constraints are satisfied. We call the resulting lists of quotient polynomials the *boundary quotients* and the *transition quotients* respectively.
+There is another layer of redundancy, but it is only apparent after the evaluation checks are unrolled. The FRI compiler simulates an evaluation check by a) subtracting the y-coordinate, b) dividing out the zerofier, which is the minimal polynomial that vanishes at the x-coordinate, and c) proving that the resulting quotient has a bounded degree. This procedure happens twice for the STARK polynomials -- first: applied to the trace polynomials to show satisfaction of the boundary constraints, and second: applied to the transition polynomials to show that the transition constraints are satisfied. We call the resulting lists of quotient polynomials the _boundary quotients_ and the _transition quotients_ respectively.
 
 The redundancy comes from the fact that the trace polynomials relate to both quotients. It can therefore be eliminated by merging the equations they are involved in. The next diagram illustrates this elimination in the context of the STARK Polynomial IOP workflow. The green box indicates that the polynomials are committed to through the familiar evaluation and Merkle root procedure and are provided as input to FRI.
 
-![Overview of the STARK workflow](graphics/stark-workflow.svg)
+![Overview of the STARK workflow](./../../graphics/stark-workflow.svg)
 
-At the top of this diagram in red are the objects associated with the arithmetic constraint system, with the constraints written in small caps font to indicate that they are known to the verifier. The prover interpolates the execution trace to obtain the trace polynomials, but it is not necessary to commit to these polynomials. Instead, the prover interpolates the boundary points and subtracts the resulting interpolants from the trace polynomials. This procedure produces the *dense trace polynomials*, for lack of a better name. To obtain the boundary quotients from the dense trace polynomials, the prover divides out the zerofier. Note that the boundary quotients and trace polynomials are equivalent in the following sense: if the verifier knows a value in a given point of one, he can compute the matching value of the other using only public information.
+At the top of this diagram in red are the objects associated with the arithmetic constraint system, with the constraints written in small caps font to indicate that they are known to the verifier. The prover interpolates the execution trace to obtain the trace polynomials, but it is not necessary to commit to these polynomials. Instead, the prover interpolates the boundary points and subtracts the resulting interpolants from the trace polynomials. This procedure produces the _dense trace polynomials_, for lack of a better name. To obtain the boundary quotients from the dense trace polynomials, the prover divides out the zerofier. Note that the boundary quotients and trace polynomials are equivalent in the following sense: if the verifier knows a value in a given point of one, he can compute the matching value of the other using only public information.
 
 To obtain the transition polynomials, the prover evaluates the transition constraints (recall, these are given as multivariate polynomials) symbolically in the trace polynomials. To get the transition quotients from the transition polynomials, divide out the zerofier. Assume for the time being that the verifier is capable of evaluating this zerofier efficiently. Note that the transition quotients and the trace polynomials are not equivalent -- the verifier cannot necessarily undo the symbolic evaluation. However, this non-equivalence does not matter. What the verifier needs to verify is that the boundary quotients and the transition quotients are linked. Traveling from the boundary quotients to the transition quotients, and performing the indicated arithmetic along the way, establishes this link. The remaining part of the entire computational integrity claim is the bounded degree of the quotient polynomials, and this is exactly what FRI already solves.
 
@@ -77,55 +87,59 @@ The use of the plural on the right hand side is slightly misleading. After the b
 To summarize, this workflow generates two recipes: one for the prover and one for the verifier. They are presented here in abstract terms and in interactive form.
 
 Prover:
- - Interpolate the execution trace to obtain the trace polynomials.
- - Interpolate the boundary points to obtain the boundary interpolants, and compute the boundary zerofiers along the way.
- - Subtract the boundary interpolants from the trace polynomials, giving rise to the dense trace polynomials.
- - Divide out the boundary zerofiers from the dense trace polynomials.
- - Commit to the dense trace polynomials.
- - Get $r$ random coefficients from the verifier.
- - Compress the $r$ transition constraints into one master constraint that is the weighted sum.
- - Symbolically evaluate the master constraint in the trace polynomials, thus generating the transition polynomial.
- - Divide out the transition zerofier to get the transition quotient.
- - Commit to the transition zerofier.
- - Run FRI on all committed polynomials.
- - Supply the Merkle leafs and authentication paths that are requested by the verifier.
+
+- Interpolate the execution trace to obtain the trace polynomials.
+- Interpolate the boundary points to obtain the boundary interpolants, and compute the boundary zerofiers along the way.
+- Subtract the boundary interpolants from the trace polynomials, giving rise to the dense trace polynomials.
+- Divide out the boundary zerofiers from the dense trace polynomials.
+- Commit to the dense trace polynomials.
+- Get $r$ random coefficients from the verifier.
+- Compress the $r$ transition constraints into one master constraint that is the weighted sum.
+- Symbolically evaluate the master constraint in the trace polynomials, thus generating the transition polynomial.
+- Divide out the transition zerofier to get the transition quotient.
+- Commit to the transition zerofier.
+- Run FRI on all committed polynomials.
+- Supply the Merkle leafs and authentication paths that are requested by the verifier.
 
 Verifier:
- - Read the commitments to the boundary quotients.
- - Supply the random coefficients for the master transition constraint.
- - Read the commitment to the transition quotient.
- - Run the FRI verifier.
- - Verify the link between boundary quotients and transition quotient. To do this:
-   - For all points of the transition quotient codeword that were queried in the first round of FRI do:
-     - Let the point be $(x, y)$.
-     - Query the matching points on the boundary quotient codewords. Note that there are two of them, $x$ and $\omicron \cdot x$, indicating points "one cycle apart".
-     - Multiply the y-coordinates of these points by the zerofiers' values in $x$ and $\omicron \cdot x$.
-     - Add the boundary interpolants' values.
-     - Evaluate the master transition constraint in this point.
-     - Divide by the value of the transition zerofier in $x$.
-     - Verify that the resulting value equals $y$.
+
+- Read the commitments to the boundary quotients.
+- Supply the random coefficients for the master transition constraint.
+- Read the commitment to the transition quotient.
+- Run the FRI verifier.
+- Verify the link between boundary quotients and transition quotient. To do this:
+  - For all points of the transition quotient codeword that were queried in the first round of FRI do:
+    - Let the point be $(x, y)$.
+    - Query the matching points on the boundary quotient codewords. Note that there are two of them, $x$ and $\omicron \cdot x$, indicating points "one cycle apart".
+    - Multiply the y-coordinates of these points by the zerofiers' values in $x$ and $\omicron \cdot x$.
+    - Add the boundary interpolants' values.
+    - Evaluate the master transition constraint in this point.
+    - Divide by the value of the transition zerofier in $x$.
+    - Verify that the resulting value equals $y$.
 
 ## Generalized AIR Constraints
 
 The description so far makes a clear distinction between transition constraints on the one hand, and boundary constraints on the other hand. However, there is a unifying perspective that characterizes both as cleanly dividing ratios of polynomials. More accurately, the denominator divides the numerator cleanly if the computation is integral; otherwise, there is a nonzero remainder.
 
 Such a generalized AIR constraint is given by two polynomials.
- - The *numerator* determines which equations between elements of the algebraic execution trace hold, in a manner that is independent of the cycle. For transition constraints, the numerator is exactly the transition constraint polynomial. For boundary constraints, the numerator is simply $t_ i(X) - y$ where $y$ is supposedly the value of $t_ i(X)$ at the given boundary.
- - The *denominator* is a zerofier that determines *where* the equality is supposed to hold, by vanishing (*i.e.*, evaluating to zero) in those points. For transition constraints, this zerofier vanishes on all points of the trace evaluation domain except the last. For the boundary constraints, this zerofier vanishes only on the boundary.
+
+- The _numerator_ determines which equations between elements of the algebraic execution trace hold, in a manner that is independent of the cycle. For transition constraints, the numerator is exactly the transition constraint polynomial. For boundary constraints, the numerator is simply $t_ i(X) - y$ where $y$ is supposedly the value of $t_ i(X)$ at the given boundary.
+- The _denominator_ is a zerofier that determines _where_ the equality is supposed to hold, by vanishing (_i.e._, evaluating to zero) in those points. For transition constraints, this zerofier vanishes on all points of the trace evaluation domain except the last. For the boundary constraints, this zerofier vanishes only on the boundary.
 
 Treating boundary constraints and transition constraints as subclasses of generalized AIR constraints, leads to a simpler workflow diagram. Now, the prover commits to the raw trace polynomials, but these polynomials are not input to the FRI subprotocol. Instead, they are used to only verify that the leafs of the first Merkle tree of FRI were computed correctly.
 
-![STARK workflow for generalized AIR constraints](graphics/generalized-air-workflow.svg)
+![STARK workflow for generalized AIR constraints](./../../graphics/generalized-air-workflow.svg)
 
 The implementation of this tutorial follows the earlier workflow, which separates boundary constraints from transition constraints, rather than the workflow informed by a generalized notion of AIR constraints.
 
 ## Adding Zero-Knowledge
 
-Formally, an interactive proof system is *zero-knowledge* if the distribution of transcripts arising from authentic executions of the protocol is independent of the witness and can be sampled efficiently with public information only. In practice, this means that the prover randomizes the data structures and proof arithmetic using randomness that also remains secret. The transcript is independent of the witness because *any* transcript can be explained by the right choice of randomizers.
+Formally, an interactive proof system is _zero-knowledge_ if the distribution of transcripts arising from authentic executions of the protocol is independent of the witness and can be sampled efficiently with public information only. In practice, this means that the prover randomizes the data structures and proof arithmetic using randomness that also remains secret. The transcript is independent of the witness because _any_ transcript can be explained by the right choice of randomizers.
 
 With respect to randomizing the STARK proof system, it is worth separating the mechanism into two parts and randomize them separately.
- 1. The FRI bounded degree proof. This component is randomized by adding a randomizer codeword to the nonlinear combination. This randomizer codeword corresponds to a polynomial of maximal degree whose coefficients are drawn uniformly at random.
- 2. The linking part that establishes that the boundary quotients are linked to the transition quotient(s). To randomize this, the execution trace for every register is extended with $4s$ uniformly random field elements. The number $4s$ comes from the number $s$ of colinearity checks in the FRI protocol: every colinearity check induces two queries in the initial codeword. The two values of the transition quotient codeword need to be linked two four values of the boundary quotient codewords.
+
+1.  The FRI bounded degree proof. This component is randomized by adding a randomizer codeword to the nonlinear combination. This randomizer codeword corresponds to a polynomial of maximal degree whose coefficients are drawn uniformly at random.
+2.  The linking part that establishes that the boundary quotients are linked to the transition quotient(s). To randomize this, the execution trace for every register is extended with $4s$ uniformly random field elements. The number $4s$ comes from the number $s$ of colinearity checks in the FRI protocol: every colinearity check induces two queries in the initial codeword. The two values of the transition quotient codeword need to be linked two four values of the boundary quotient codewords.
 
 It is important to guarantee that none of the x-coordinates that are queried as part of FRI correspond to x-coordinates used for interpolating the execution trace. This is one of the reasons why coset-FRI comes in handy. Nevertheless, other solutions can address this problem.
 
@@ -172,7 +186,7 @@ class Stark:
         self.fri = Fri(self.generator, self.omega, fri_domain_length, self.expansion_factor, self.num_colinearity_checks)
 ```
 
-The code makes a distinction between the *original trace length*, which is one greater than the number of cycles, and the *randomized trace length* which the previous variable with $4s$ randomizers extra. A third related variable is the `omicron_domain`, which is the list of points in the subgroup of order $2^k$ where $k$ is the smallest integer such that this domain is still larger than or equal to the randomized trace length.
+The code makes a distinction between the _original trace length_, which is one greater than the number of cycles, and the _randomized trace length_ which the previous variable with $4s$ randomizers extra. A third related variable is the `omicron_domain`, which is the list of points in the subgroup of order $2^k$ where $k$ is the smallest integer such that this domain is still larger than or equal to the randomized trace length.
 
 Next up are the helper functions. First are the degree bounds calculators for a) transition polynomials; b) transition quotient polynomials; and c) the nonlinear random combination of polynomials that goes into FRI. This last number is one less than the next power of two.
 
@@ -279,7 +293,7 @@ Another difference is that the transition constraints have $2\mathsf{w}+1$ varia
 
         # commit to randomizer polynomial
         randomizer_polynomial = Polynomial([self.field.sample(os.urandom(17)) for i in range(self.max_degree(transition_constraints)+1)])
-        randomizer_codeword = randomizer_polynomial.evaluate_domain(fri_domain) 
+        randomizer_codeword = randomizer_polynomial.evaluate_domain(fri_domain)
         randomizer_root = Merkle.commit(randomizer_codeword)
         proof_stream.push(randomizer_root)
 

@@ -1,0 +1,5 @@
+files:
+  - source: /docs/en/*.md
+    ignore:
+      - /docs/en/about.md
+    translation: /docs/%two_letters_code%/%original_file_name%

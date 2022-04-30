@@ -5,26 +5,28 @@ This part of the tutorial puts the tools developed in the previous parts togethe
 ## Rescue-Prime
 
 [Rescue-Prime](https://eprint.iacr.org/2020/1143.pdf) is an arithmetization-oriented hash function, meaning that it has a compact description in terms of AIR. It is a sponge function constructed from the Rescue-XLIX permutation $f_{\mathrm{R}^{\mathrm{XLIX}}} : \mathbb{F}^m \rightarrow \mathbb{F}^m$, consists of several almost-identical rounds. Every round consists of six steps:
- 1. Forward S-box. Every element of the state is raised to the power $\alpha$, where $\alpha$ is the smallest invertible power.
- 2. MDS. The vector of state elements is multiplied by a matrix with special properties.
- 3. Round constants. Pre-defined constants are added to every element of the state.
- 4. Backward S-box. Every element of the state is raised to the power $\alpha^{-1}$, which is the integer whose power map is the inverse of $x \mapsto x^\alpha$.
- 5. MDS. The vector of state elements is multiplied by a matrix with special properties.
- 6. Round constants. Pre-defined constants are added to every element of the state.
 
-![Rescue-XLIX round function](graphics/rescue-prime-round.svg)
+1.  Forward S-box. Every element of the state is raised to the power $\alpha$, where $\alpha$ is the smallest invertible power.
+2.  MDS. The vector of state elements is multiplied by a matrix with special properties.
+3.  Round constants. Pre-defined constants are added to every element of the state.
+4.  Backward S-box. Every element of the state is raised to the power $\alpha^{-1}$, which is the integer whose power map is the inverse of $x \mapsto x^\alpha$.
+5.  MDS. The vector of state elements is multiplied by a matrix with special properties.
+6.  Round constants. Pre-defined constants are added to every element of the state.
 
-The rounds are *almost* identical but not quite because constants are different in every rounds. While the Backward S-box step seems like a high degree operation, as we shall see, all six steps of the Rescue-XLIX round function can be captured by non-deterministic transition constraints of degree $\alpha$.
+![Rescue-XLIX round function](./../../graphics/rescue-prime-round.svg)
+
+The rounds are _almost_ identical but not quite because constants are different in every rounds. While the Backward S-box step seems like a high degree operation, as we shall see, all six steps of the Rescue-XLIX round function can be captured by non-deterministic transition constraints of degree $\alpha$.
 
 Once the Rescue-XLIX permutation is defined, one obtains Rescue-Prime by instantiating a sponge function with it. In this construction, input field elements are absorbed into the top $r$ elements of the state in between permutations. After one final permutation, the top $r$ elements are read out. The Rescue-Prime hash digest consists of these $r$ elements.
 
-![Rescue-Prime sponge construction](graphics/rescue-prime-sponge.svg)
+![Rescue-Prime sponge construction](./../../graphics/rescue-prime-sponge.svg)
 
 For the present STARK proof the following parameters are used:
- - prime field of $p = 407 \cdot 2^{119} + 1$ elements
- - $\alpha = 3$ and $\alpha^{-1} = 180331931428153586757283157844700080811$
- - $m = 2$
- - $r = 1$.
+
+- prime field of $p = 407 \cdot 2^{119} + 1$ elements
+- $\alpha = 3$ and $\alpha^{-1} = 180331931428153586757283157844700080811$
+- $m = 2$
+- $r = 1$.
 
 Furthermore, the input to the hash computation will be a single field element. So in particular, there will be only one round of absorbing and one application of the permutation.
 
@@ -256,8 +258,9 @@ The transition constraint polynomial is obtained by moving all terms to the left
 ```
 
 The boundary constraints are a lot simpler. At the beginning, the first state element is the unknown secret and the second state element is zero because the sponge construction defines it so. At the end (after all $N$ rounds or $T$ cycles), the first state element is the one element of known hash digest $[h]$, and the second state element is unconstrained. Note that this second state element must be kept secret to be secure -- otherwise the attacker and invert the permutation. This description gives rise to the following set $\mathcal{B}$ of triples $(c, r, e) \in \lbrace 0, \ldots, T \rbrace \times \lbrace 0, \ldots, \mathsf{w}-1 \rbrace \times \mathbb{F}$:
- - $(0, 1, 0)$
- - $(T, 0, h)$.
+
+- $(0, 1, 0)$
+- $(T, 0, h)$.
 
 ```python
     def boundary_constraints( self, output_element ):
@@ -356,7 +359,7 @@ class RPSSS:
         return self.stark.verify(stark_proof, transition_constraints, boundary_constraints, proof_stream)
 ```
 
-Note the explicit argument concerning the proof stream. This needs to be a special object that simulates a *message-dependent* Fiat-Shamir transform, as opposed to a regular one.
+Note the explicit argument concerning the proof stream. This needs to be a special object that simulates a _message-dependent_ Fiat-Shamir transform, as opposed to a regular one.
 
 ### Message-Dependent Fiat-Shamir
 
@@ -405,13 +408,14 @@ At this point it is possible to define the key generation, signature generation,
         return self.stark_verify(pk, signature, sps)
 ```
 
-This code defines a *provably secure*[^1], *post-quantum* signature scheme that (almost) achieves a 128 bit security level. While this description sounds flattering, the scheme's performance metrics are much less so:
- - secret key size: 16 bytes (yay!)
- - public key size: 16 bytes (yay!)
- - signature size: **~133 kB**
- - keygen time: 0.01 seconds (acceptable)
- - signing time: **250 seconds**
- - verification time: **444 seconds**
+This code defines a _provably secure_[^1], _post-quantum_ signature scheme that (almost) achieves a 128 bit security level. While this description sounds flattering, the scheme's performance metrics are much less so:
+
+- secret key size: 16 bytes (yay!)
+- public key size: 16 bytes (yay!)
+- signature size: **~133 kB**
+- keygen time: 0.01 seconds (acceptable)
+- signing time: **250 seconds**
+- verification time: **444 seconds**
 
 There might be a few optimizations available that can reduce the proof's size, such as merging common paths when opening a batch of Merkle leafs. However, these optimizations distract from the purpose of this tutorial, which is to highlight and explain the mathematics involved.
 

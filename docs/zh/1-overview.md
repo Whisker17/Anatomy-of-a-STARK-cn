@@ -1,19 +1,19 @@
-# Anatomy of a STARK, Part 1: STARK Overview
+# STARKs 详解，第 1 部分：STARKs 概述
 
-STARKs are a class of interactive proof systems, but for the purpose of this tutorial it's good to think of them as a special case of SNARKs in which
+STARKs 是一种交互式证明系统。 但为了更好的理解，你可以将它们视为 SNARKs 的特殊案例：
 
-- hash functions are the only cryptographic ingredient,
-- arithmetization is based on AIR (algebraic intermediate representation [^1]), and reduces the claim about computational integrity to one about the low degree of certain polynomials
-- the low degree of polynomials is proven by using FRI as a subprotocol, and FRI itself is instantiated with Merkle trees [^2];
-- zero-knowledge is optional.
+- 散列函数是唯一的密码学集成
+- 算术化基于 AIR (代数中间表示[^1])，将关于计算完整性的声明简化为关于某多项式低阶的声明
+- 使用 FRI 作为子协议可以证明多项式的低阶， 并且 FRI 本身用默克树实例化 [^2];
+- 零知识是可选的。
 
-This part of the tutorial is about explaining the key terms in this definition of STARKs.
+本教程的这一部分是要解释 STARKs 定义中的关键术语。
 
-## Interactive Proof Systems
+## 交互式证明系统
 
-In computational complexity theory, an interactive proof system is a protocol between at least two parties in which one party, the verifier, is convinced of the correctness of a certain mathematical claim if and only if that claim is true. In theory, the claim could be anything expressible by mathematical symbols, such as the Birch and Swinnerton-Dyer conjecture, $\mathbf{P} \neq \mathbf{NP}$, or "the fifteenth Fibonacci number is 643617." (In a sound proof system, the verifier will reject that last claim.)
+在计算复杂性理论中，交互式证明系统是至少两个当事方之间的协议，其中一方为验证人，且只要而且只有在该声明是正确的情况下，验证人确信相应的数学声明是正确的。 从理论上讲，声明可以用数学符号，例如Birch和Swinnerton-Dyer的推测来表述。 $\mathbf{P} \neq \mathbf{NP}$, 或 "第十五个 Fibonacci 数字是 643617." (在一个健全的证明系统中，验证人将拒绝最后一个声明。)
 
-A cryptographic proof system turns this abstract notion of interactive proof systems into a concrete object intended for deployment in the real world. This restriction to real world applications induces a couple of simplifications:
+一个密码学证明系统将这种交互式证明系统的抽象概念变成一个打算在现实世界中部署的具体目标。 这种对现实世界应用的限制促成了一些简化：
 
 - The claim is not about a mathematical conjecture but concerns the integrity of a particular computation, like "circuit $C$ gives output $y$ when evaluated on input $x$", or "Turing machine $M$ outputs $y$ after $T$ steps". The proof system is said to establish _computational integrity_.
 - There are two parties to the protocol, the prover and the verifier. Without loss of generality the messages sent by the verifier to the prover consist of unadulterated randomness and in this case (so: almost always) the proof system can be made non-interactive with the _Fiat-Shamir transform_. Non-interactive proof systems consist of a single message from the prover to the verifier.

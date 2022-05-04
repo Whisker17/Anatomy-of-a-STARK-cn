@@ -19,8 +19,8 @@ STARKs 是一种交互式证明系统。 但为了更好的理解，你可以将
 - 协议中有两种角色，即证明人和验证人。 在不失去通用性的情况下，验证人向证明人发送的信息包含了纯粹的随机性。在这种情况下(所以：几乎总是)，证明系统可以与 _Fiat-Shamir转换_ 不交互。 非交互式证明系统中仅有一条从证明人到验证人的信息。
 - 验证人不需要保证完美的安全性，而是可以接受非常小的错误率。 或者，证明系统针对其计算能力受限的证明人提供安全性保证也是可以接受的。 毕竟，所有计算机实际上都有计算界限。 有时作者使用术语 _参数系统_ 来区分协议和提供计算无界限安全性的的证明系统，以及_参数_，用于非交互性转换产生的文本。
 - 必须有令人信服的理由说明为什么验证人不能单纯重新运行计算，因为计算完整性声明主张其完整性。 这是因为证明人能够获得验证人无法获得的信息。
-  - When the restricted resource is time, the verifier should run an order of magnitude faster than a naïve re-execution of the program. Proof systems that achieve this property are said to be _succinct_ or have _succinct verification_.
-  - Succinct verification requires short proofs, but some proof systems like [Bulletproofs](https://eprint.iacr.org/2017/1066.pdf) or [Aurora](https://eprint.iacr.org/2018/828.pdf) feature compact proofs but still have slow verifiers.
+  - 当时间受限时，验证人应该比原生系统的重新执行程序快一个数量级。 这样我们就称实现此属性的系统是 _简洁_ 或 _简洁验证_。
+  - 简洁验证需要较短的证明，但是一些证明系统，例如 [Bulletproofs](https://eprint.iacr.org/2017/1066.pdf) or [Aurora](https://eprint.iacr.org/2018/828.pdf) 其有紧凑的证明，但仍然验证依然比较慢。
   - When the verifier has no access to secret information that is available to the prover, and when the proof system protects the confidentiality of this secret, the proof system satisfies _zero-knowledge_. The verifier is convinced of the truth of a computational claim while learning no information about some or all of the inputs to that computation.
 - Especially in the context of zero-knowledge proof systems, the computational integrity claim may need a subtle amendment. In some contexts it is not enough to prove the correctness of a claim, but the prover must additionally prove that he _knows_ the secret additional input, and could as well have outputted the secret directly instead of producing the proof.[^3] Proof systems that achieve this stronger notion of soundness called knowledge-soundness are called _proofs (or arguments) of knowledge_.
 

@@ -11,16 +11,16 @@ STARKs 是一种交互式证明系统。 但为了更好的理解，你可以将
 
 ## 交互式证明系统
 
-在计算复杂性理论中，交互式证明系统是至少两个当事方之间的协议，其中一方为验证人，且只要而且只有在该声明是正确的情况下，验证人确信相应的数学声明是正确的。 从理论上讲，声明可以用数学符号，例如Birch和Swinnerton-Dyer的推测来表述。 $\mathbf{P} \neq \mathbf{NP}$, 或 "第十五个 Fibonacci 数字是 643617." (在一个健全的证明系统中，验证人将拒绝最后一个声明。)
+在计算复杂性理论中，交互式证明系统是至少两个当事方之间的协议，其中一方为验证人，且只要而且只有在该声明是正确的情况下，验证人确信相应的数学声明是正确的。 从理论上讲，声明可以用数学符号，例如 Birch 和 Swinnerton-Dyer 的推测来表述。 $\mathbf{P} \neq \mathbf{NP}$, 或 "第十五个 Fibonacci 数字是 643617." (在一个健全的证明系统中，验证人将拒绝最后一个声明。)
 
 一个密码学证明系统将这种交互式证明系统的抽象概念变成一个打算在现实世界中部署的具体目标。 这种对现实世界应用的限制促成了一些简化：
 
-- The claim is not about a mathematical conjecture but concerns the integrity of a particular computation, like "circuit $C$ gives output $y$ when evaluated on input $x$", or "Turing machine $M$ outputs $y$ after $T$ steps". The proof system is said to establish _computational integrity_.
-- There are two parties to the protocol, the prover and the verifier. Without loss of generality the messages sent by the verifier to the prover consist of unadulterated randomness and in this case (so: almost always) the proof system can be made non-interactive with the _Fiat-Shamir transform_. Non-interactive proof systems consist of a single message from the prover to the verifier.
-- Instead of perfect security, it is acceptable for the verifier to have a nonzero but negligibly small false positive or false negative rate. Alternatively, it is acceptable for the proof system to offer security only against provers whose computational power is bounded. After all, all computers are computationally bounded in practice. Sometimes authors use the term _argument system_ to distinguish the protocol from a proof system that offers security against computationally unbounded provers, and _argument_ for the transcript resulting from the non-interactivity transform.
-- There has to be a compelling reason why the verifier cannot naïvely re-run the computation whose integrity is asserted by the computational integrity claim. This is because the prover has access to resources that the verifier does not have access to.
-  - When the restricted resource is time, the verifier should run an order of magnitude faster than a naïve re-execution of the program. Proof systems that achieve this property are said to be _succinct_ or have _succinct verification_.
-  - Succinct verification requires short proofs, but some proof systems like [Bulletproofs](https://eprint.iacr.org/2017/1066.pdf) or [Aurora](https://eprint.iacr.org/2018/828.pdf) feature compact proofs but still have slow verifiers.
+- 该声明并不涉及数学推测，而涉及某一特定计算的完整性。 如"电路 $C$ 在输入 $x$ 时结果输出 $y$ ", 或 "图灵机 $M$ 在 $T$ 步后输出 $y$ 那么我们就说该证明系统已建立 _计算完整性_。
+- 协议中有两种角色，即证明人和验证人。 在不失去通用性的情况下，验证人向证明人发送的信息包含了纯粹的随机性。在这种情况下(所以：几乎总是)，证明系统可以与 _Fiat-Shamir转换_ 不交互。 非交互式证明系统中仅有一条从证明人到验证人的信息。
+- 验证人不需要保证完美的安全性，而是可以接受非常小的错误率。 或者，证明系统针对其计算能力受限的证明人提供安全性保证也是可以接受的。 毕竟，所有计算机实际上都有计算界限。 有时作者使用术语 _参数系统_ 来区分协议和提供计算无界限安全性的的证明系统，以及_参数_，用于非交互性转换产生的文本。
+- 必须有令人信服的理由说明为什么验证人不能单纯重新运行计算，因为计算完整性声明主张其完整性。 这是因为证明人能够获得验证人无法获得的信息。
+  - 当时间受限时，验证人应该比原生系统的重新执行程序快一个数量级。 这样我们就称实现此属性的系统是 _简洁_ 或 _简洁验证_。
+  - 简洁验证需要较短的证明，但是一些证明系统，例如 [Bulletproofs](https://eprint.iacr.org/2017/1066.pdf) or [Aurora](https://eprint.iacr.org/2018/828.pdf) 其有紧凑的证明，但仍然验证依然比较慢。
   - When the verifier has no access to secret information that is available to the prover, and when the proof system protects the confidentiality of this secret, the proof system satisfies _zero-knowledge_. The verifier is convinced of the truth of a computational claim while learning no information about some or all of the inputs to that computation.
 - Especially in the context of zero-knowledge proof systems, the computational integrity claim may need a subtle amendment. In some contexts it is not enough to prove the correctness of a claim, but the prover must additionally prove that he _knows_ the secret additional input, and could as well have outputted the secret directly instead of producing the proof.[^3] Proof systems that achieve this stronger notion of soundness called knowledge-soundness are called _proofs (or arguments) of knowledge_.
 
@@ -79,6 +79,6 @@ This description glosses over many details. The remainder of this tutorial will 
 
 [0](index) - **1** - [2](basic-tools) - [3](fri) - [4](stark) - [5](rescue-prime) - [6](faster)
 
-[^1]: Also, algebraic _internal_ representation.
+[^1]: 另外，代数 _内部_ 表示。
 [^2]: Note that FRI is defined in terms of abstract oracles which can be queried in arbitrary locations; a FRI protocol can thus be compiled into a concrete protocol by simulating the oracles with any cryptographic vector commitment scheme. Merkle trees provide this functionality but are not the only cryptographic primitive to do it.
 [^3]: Formally, _knowledge_ is defines as follows: an extractor algorithm must exist which has oracle access to a possibly-malicious prover, pretends to be the matching verifier (and in particular reads the messages coming from the prover and sends its own via the same interface), has the power to rewind the possibly-malicious prover to any earlier point in time, runs in polynomial time, and outputs the witness. STARKs have been shown to satisfy this property, see section 5 of the [EthSTARK documentation](https://eprint.iacr.org/2021/582.pdf).

@@ -21,41 +21,41 @@ STARKs 是一种交互式证明系统。 但为了更好的理解，你可以将
 - 必须有令人信服的理由说明为什么验证人不能单纯重新运行计算，因为计算完整性声明主张其完整性。 这是因为证明人能够获得验证人无法获得的信息。
   - 当时间受限时，验证人应该比原生系统的重新执行程序快一个数量级。 这样我们就称实现此属性的系统是 _简洁_ 或 _简洁验证_。
   - 简洁验证需要较短的证明，但是一些证明系统，例如 [Bulletproofs](https://eprint.iacr.org/2017/1066.pdf) or [Aurora](https://eprint.iacr.org/2018/828.pdf) 其有紧凑的证明，但仍然验证依然比较慢。
-  - When the verifier has no access to secret information that is available to the prover, and when the proof system protects the confidentiality of this secret, the proof system satisfies _zero-knowledge_. The verifier is convinced of the truth of a computational claim while learning no information about some or all of the inputs to that computation.
-- Especially in the context of zero-knowledge proof systems, the computational integrity claim may need a subtle amendment. In some contexts it is not enough to prove the correctness of a claim, but the prover must additionally prove that he _knows_ the secret additional input, and could as well have outputted the secret directly instead of producing the proof.[^3] Proof systems that achieve this stronger notion of soundness called knowledge-soundness are called _proofs (or arguments) of knowledge_.
+  - 当验证人无法获取证明人提供的秘密信息时， 并且当证明系统确保此秘密的保密性时，证明系统满足了 _零知识性_ 的要求。 验证人相信计算声明的真实性，但却不了解对计算的部分或全部输入。
+- 特别是在零知识证明的背景中，计算完整性要求可能需要稍微有些调整。 在有些情况下，仅仅证明声明的正确性是不够的。 证明人还必须另外证明他 _知道_ 额外的秘密输入， 而且也可以不生成证明而直接输出秘密。[^3] 实现这种更强有力的可靠性概念，即知识健全性的证明系统被称为 _知识(或论点)证明_
 
-A SNARK is a _Succinct Non-interactive ARgument of Knowledge_. The [paper](https://eprint.iacr.org/2011/443.pdf) that coined the term SNARK used _succinct_ to denote proof system with efficient verifiers. However, in recent years the meaning of the term has been diluted to include any system whose proofs are compact. This tutorial takes the side of the original definition.
+SNARK是 _一个非交互式的知识论证_。 该 [论文](https://eprint.iacr.org/2011/443.pdf) 构造了 SNARK 一词，使用 _简洁_ 表示高效验证人的证明系统。 然而，近年来该词的含义被淡化，以包括任何紧凑证明的系统。 本教程将还原其原始定义。
 
-## STARK Overview
+## STARK 概述
 
-The acronym STARK stands for Scalable Transparent ARgument of Knowledge. _Scalable_ refers to the fact that that two things occur simultaneously: (1) the prover has a running time that is at most quasilinear in the size of the computation, in contrast to SNARKs where the prover is allowed to have a prohibitively expensive complexity, and (2) verification time is poly-logarithmic in the size of the computation. _Transparent_ refers to the fact that all verifier messages are just publicly sampled random coins. In particular, no trusted setup procedure is needed to instantiate the proof system, and hence there is no cryptographic toxic waste. The acronym's denotation suggests that non-interactive STARKs are a subclass of SNARKs, and indeed they are, but the term is generally used to refer to a _specific_ construction for scalable transparent SNARKs.
+“STARK”是一个缩写词，指可扩展透明知识论证。 _可扩展_ 是指以下两件事情同时发生：(1)证明人的运行时间在计算量上最多是准线性的， 与在 SNARK 中允许其非常大的复杂性形成对比，(2) 验证时间是计算量上是多对数级别的。 _透明_ 是指所有验证人消息都是公开的。 尤其是，不需要可信初始化来实例化证明系统，因此不存在密码学有害物。 缩写词表示非交互式 STARKs 是 SNARKs 的一个子类，但实际上该词一般用来指用于可扩展透明的 SNARKs 的 _特定的_ 构造。
 
-The particular qualities of this construction are best illustrated in the context of the compilation pipeline. Depending on the level of granularity, one might opt to subdivide this process into more or fewer steps. For the purpose of introducing STARKs, the compilation pipeline is divided into four stages and three transformations. Later on in this tutorial there will be a much more fine-grained pipeline and diagram.
+这一构造的特殊性质在编译过程中得到最好的说明。 根据不同程度的粒度，人们可能会选择将这个过程分成更多或者更少步骤。 我们把编译过程分为四个阶段和三个转换以介绍 STARKs。 本教程稍后将有更详细的过程和图表。
 
 ![The compilation pipeline is divisible into three transformation and four stages.](./../../graphics/pipeline.svg "Overview of the compilation pipeline for SNARKs")
 
-### Computation
+### 计算
 
-The input to the entire pipeline is a _computation_, which you can think of as a program, an input, and an output. All three are provided in a machine-friendly format, such as a list of bytes. In general, the program consists of instructions that determine how a machine manipulates its resources. If the right list of instructions can simulate an arbitrary Turing machine, then the machine architecture is Turing-complete.
+整个过程中的输入是 _计算_，您可以将其视为一个程序、一个输入或是另一段输出。 这三种方式都以机器友好的格式存在，例如字节列表。 一般而言，程序由决定机器如何操纵其资源的指示组成。 如果正确的指令列表可以模拟任意的图灵机，那么该机器便是图灵完备的。
 
-In this tutorial the program is hardcoded into the machine architecture. As a result, the space of allowable computations is rather limited. Nevertheless, the inputs and outputs remain variable.
+在这个教程中，程序被硬编码到机器架构中。 因此，允许的计算空间相当有限。 尽管如此，输入和输出依然是可变的。
 
-The _resources_ that a computation requires could be _time_, _memory_, _randomness_, _secret information_, _parallelism_. The goal is to transform the computation into a format that enables resource-constrained verifier to verify its integrity. It is possible to study more types of resources still, such as entangled qubits, non-determinism, or oracles that compute a given black box function, but the resulting questions are typically the subject of computational complexity theory rather than cryptographical practice.
+计算所需的 _资源_ 可能是 _时间_, _内存_ _随机性_, _秘密信息_ 和 _并行性_. 目标是将计算转变为一种格式，使资源有限的验证人能够验证其完整性。 仍然可以研究更多类型的资源，例如缠纠缠的量子比特、 非确定性的或计算特定的黑盒函数的预言机 。 但由此产生的问题通常是计算复杂性理论，而不是密码学实践问题。
 
-### Arithmetization and Arithmetic Constraint System
+### 算术和算术约束系统
 
-The first transformation in the pipeline is known as _arithmetization_. In this procedure, the sequence of elementary logical and arithmetical operations on strings of bits is transformed into a sequence of native finite field operations on finite field elements, such that the two represent the same computation. The output is an arithmetic constraint system, essentially a bunch of equations with coefficients and variables taking values from the finite field. The computation is integral _if and only if_ the constraint system has a satisfying solution -- meaning, a single assignment to the variables such that all the equations hold.
+过程中的第一个转换称为 _算术_。 在此过程中，在位串上的基本逻辑和算术运算序列被转换为对有限域元素的原生有限域操作序列，使得两者表示相同的计算。 输出是一个算术约束系统，本质上是一堆方程，其系数和变量从有限域中取值。 计算完备是指_当且仅当_约束系统有一个令人满意的解决方案——这意味着，有一个解使得所有方程都成立。
 
-The STARK proof system arithmetizes a computation as follows. At any point in time, the state of the computation is contained in a tuple of $\mathsf{w}$ registers that take values from the finite field $\mathbb{F}$. The machine defines a _state transition function_ $f : \mathbb{F}^\mathsf{w} \rightarrow \mathbb{F}^\mathsf{w}$ that updates the state every cycle. The _algebraic execution trace (AET)_ is the list of all state tuples in chronological order.
+STARK 证明系统算术化进行了以下运算： 在任何时间点，计算状态都包含在 $\mathsf{w}$ 寄存器的元组中，这些寄存器从有限域 $\mathbb{F}$ 中获取值。 机器定义了一个_状态转换函数_ $f : \mathbb{F}^\mathsf{w} \rightarrow \mathbb{F}^\mathsf{w}$，每个周期更新状态。 _代数执行跟踪 (AET)_ 是按时间顺序排列的所有状态元组的列表。
 
-The arithmetic constraint system defines at least two types of constraints on the algebraic execution trace:
+算术约束系统在代数执行轨迹上定义了至少两种类型的约束：
 
-- _Boundary constraints_: at the start or at the end of the computation an indicated register has a given value.
-- _Transition constraints_: any two consecutive state tuples evolved in accordance with the state transition function.
+- _边界约束_: 在计算开始或结束时，指定的寄存器有一个给定的值。
+- _转换约束_：任意两个连续的状态元组按照状态转换函数演化。
 
-Collectively, these constraints are known as the _algebraic intermediate representation_, or _AIR_. Advanced STARKs may define more constraint types in order to deal with memory or with consistency of registers within one cycle.
+这些约束统称为_代数中间表示_或_AIR_。 高级 STARKs 可以定义更多的约束类型，以便在一个周期内处理内存或寄存器的一致性。
 
-### Interpolation and Polynomial IOPs
+### 插值和多项式 IOPs
 
 Interpolation in the usual sense means finding a polynomial that passes through a set of data points. In the context of the STARK compilation pipeline, _interpolation_ means finding a representation of the arithmetic constraint system in terms of polynomials. The resulting object is not an arithmetic constraint system but an abstract protocol called a _Polynomial IOP_.
 

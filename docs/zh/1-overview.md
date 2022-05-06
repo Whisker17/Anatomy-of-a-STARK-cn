@@ -21,64 +21,64 @@ STARKs 是一种交互式证明系统。 但为了更好的理解，你可以将
 - 必须有令人信服的理由说明为什么验证人不能单纯重新运行计算，因为计算完整性声明主张其完整性。 这是因为证明人能够获得验证人无法获得的信息。
   - 当时间受限时，验证人应该比原生系统的重新执行程序快一个数量级。 这样我们就称实现此属性的系统是 _简洁_ 或 _简洁验证_。
   - 简洁验证需要较短的证明，但是一些证明系统，例如 [Bulletproofs](https://eprint.iacr.org/2017/1066.pdf) or [Aurora](https://eprint.iacr.org/2018/828.pdf) 其有紧凑的证明，但仍然验证依然比较慢。
-  - When the verifier has no access to secret information that is available to the prover, and when the proof system protects the confidentiality of this secret, the proof system satisfies _zero-knowledge_. The verifier is convinced of the truth of a computational claim while learning no information about some or all of the inputs to that computation.
-- Especially in the context of zero-knowledge proof systems, the computational integrity claim may need a subtle amendment. In some contexts it is not enough to prove the correctness of a claim, but the prover must additionally prove that he _knows_ the secret additional input, and could as well have outputted the secret directly instead of producing the proof.[^3] Proof systems that achieve this stronger notion of soundness called knowledge-soundness are called _proofs (or arguments) of knowledge_.
+  - 当验证人无法获取证明人提供的秘密信息时， 并且当证明系统确保此秘密的保密性时，证明系统满足了 _零知识性_ 的要求。 验证人相信计算声明的真实性，但却不了解对计算的部分或全部输入。
+- 特别是在零知识证明的背景中，计算完整性要求可能需要稍微有些调整。 在有些情况下，仅仅证明声明的正确性是不够的。 证明人还必须另外证明他 _知道_ 额外的秘密输入， 而且也可以不生成证明而直接输出秘密。[^3] 实现这种更强有力的可靠性概念，即知识健全性的证明系统被称为 _知识(或论点)证明_
 
-A SNARK is a _Succinct Non-interactive ARgument of Knowledge_. The [paper](https://eprint.iacr.org/2011/443.pdf) that coined the term SNARK used _succinct_ to denote proof system with efficient verifiers. However, in recent years the meaning of the term has been diluted to include any system whose proofs are compact. This tutorial takes the side of the original definition.
+SNARK是 _一个非交互式的知识论证_。 该 [论文](https://eprint.iacr.org/2011/443.pdf) 构造了 SNARK 一词，使用 _简洁_ 表示高效验证人的证明系统。 然而，近年来该词的含义被淡化，以包括任何紧凑证明的系统。 本教程将还原其原始定义。
 
-## STARK Overview
+## STARK 概述
 
-The acronym STARK stands for Scalable Transparent ARgument of Knowledge. _Scalable_ refers to the fact that that two things occur simultaneously: (1) the prover has a running time that is at most quasilinear in the size of the computation, in contrast to SNARKs where the prover is allowed to have a prohibitively expensive complexity, and (2) verification time is poly-logarithmic in the size of the computation. _Transparent_ refers to the fact that all verifier messages are just publicly sampled random coins. In particular, no trusted setup procedure is needed to instantiate the proof system, and hence there is no cryptographic toxic waste. The acronym's denotation suggests that non-interactive STARKs are a subclass of SNARKs, and indeed they are, but the term is generally used to refer to a _specific_ construction for scalable transparent SNARKs.
+“STARK”是一个缩写词，指可扩展透明知识论证。 _可扩展_ 是指以下两件事情同时发生：(1)证明人的运行时间在计算量上最多是准线性的， 与在 SNARK 中允许其非常大的复杂性形成对比，(2) 验证时间是计算量上是多对数级别的。 _透明_ 是指所有验证人消息都是公开的。 尤其是，不需要可信初始化来实例化证明系统，因此不存在密码学有害物。 缩写词表示非交互式 STARKs 是 SNARKs 的一个子类，但实际上该词一般用来指用于可扩展透明的 SNARKs 的 _特定的_ 构造。
 
-The particular qualities of this construction are best illustrated in the context of the compilation pipeline. Depending on the level of granularity, one might opt to subdivide this process into more or fewer steps. For the purpose of introducing STARKs, the compilation pipeline is divided into four stages and three transformations. Later on in this tutorial there will be a much more fine-grained pipeline and diagram.
+这一构造的特殊性质在编译过程中得到最好的说明。 根据不同程度的粒度，人们可能会选择将这个过程分成更多或者更少步骤。 我们把编译过程分为四个阶段和三个转换以介绍 STARKs。 本教程稍后将有更详细的过程和图表。
 
-![The compilation pipeline is divisible into three transformation and four stages.](./../../graphics/pipeline.svg "Overview of the compilation pipeline for SNARKs")
+![编译过程分为三个转换和四个阶段。](./../../graphics/pipeline.svg "SNARKs 编译过程概述")
 
-### Computation
+### 计算
 
-The input to the entire pipeline is a _computation_, which you can think of as a program, an input, and an output. All three are provided in a machine-friendly format, such as a list of bytes. In general, the program consists of instructions that determine how a machine manipulates its resources. If the right list of instructions can simulate an arbitrary Turing machine, then the machine architecture is Turing-complete.
+整个过程中的输入是 _计算_，您可以将其视为一个程序、一个输入或是另一段输出。 这三种方式都以机器友好的格式存在，例如字节列表。 一般而言，程序由决定机器如何操纵其资源的指示组成。 如果正确的指令列表可以模拟任意的图灵机，那么该机器便是图灵完备的。
 
-In this tutorial the program is hardcoded into the machine architecture. As a result, the space of allowable computations is rather limited. Nevertheless, the inputs and outputs remain variable.
+在这个教程中，程序被硬编码到机器架构中。 因此，允许的计算空间相当有限。 尽管如此，输入和输出依然是可变的。
 
-The _resources_ that a computation requires could be _time_, _memory_, _randomness_, _secret information_, _parallelism_. The goal is to transform the computation into a format that enables resource-constrained verifier to verify its integrity. It is possible to study more types of resources still, such as entangled qubits, non-determinism, or oracles that compute a given black box function, but the resulting questions are typically the subject of computational complexity theory rather than cryptographical practice.
+计算所需的 _资源_ 可能是 _时间_, _内存_ _随机性_, _秘密信息_ 和 _并行性_. 目标是将计算转变为一种格式，使资源有限的验证人能够验证其完整性。 仍然可以研究更多类型的资源，例如缠纠缠的量子比特、 非确定性的或计算特定的黑盒函数的预言机 。 但由此产生的问题通常是计算复杂性理论，而不是密码学实践问题。
 
-### Arithmetization and Arithmetic Constraint System
+### 算术和算术约束系统
 
-The first transformation in the pipeline is known as _arithmetization_. In this procedure, the sequence of elementary logical and arithmetical operations on strings of bits is transformed into a sequence of native finite field operations on finite field elements, such that the two represent the same computation. The output is an arithmetic constraint system, essentially a bunch of equations with coefficients and variables taking values from the finite field. The computation is integral _if and only if_ the constraint system has a satisfying solution -- meaning, a single assignment to the variables such that all the equations hold.
+过程中的第一个转换称为 _算术_。 在此过程中，在位串上的基本逻辑和算术运算序列被转换为对有限域元素的原生有限域操作序列，使得两者表示相同的计算。 输出是一个算术约束系统，本质上是一堆方程，其系数和变量从有限域中取值。 计算完备是指_当且仅当_约束系统有一个令人满意的解决方案——这意味着，有一个解使得所有方程都成立。
 
-The STARK proof system arithmetizes a computation as follows. At any point in time, the state of the computation is contained in a tuple of $\mathsf{w}$ registers that take values from the finite field $\mathbb{F}$. The machine defines a _state transition function_ $f : \mathbb{F}^\mathsf{w} \rightarrow \mathbb{F}^\mathsf{w}$ that updates the state every cycle. The _algebraic execution trace (AET)_ is the list of all state tuples in chronological order.
+STARK 证明系统算术化进行了以下运算： 在任何时间点，计算状态都包含在 $\mathsf{w}$ 寄存器的元组中，这些寄存器从有限域 $\mathbb{F}$ 中获取值。 机器定义了一个_状态转换函数_ $f : \mathbb{F}^\mathsf{w} \rightarrow \mathbb{F}^\mathsf{w}$，每个周期更新状态。 _代数执行跟踪 (AET)_ 是按时间顺序排列的所有状态元组的列表。
 
-The arithmetic constraint system defines at least two types of constraints on the algebraic execution trace:
+算术约束系统在代数执行轨迹上定义了至少两种类型的约束：
 
-- _Boundary constraints_: at the start or at the end of the computation an indicated register has a given value.
-- _Transition constraints_: any two consecutive state tuples evolved in accordance with the state transition function.
+- _边界约束_: 在计算开始或结束时，指定的寄存器有一个给定的值。
+- _转换约束_：任意两个连续的状态元组按照状态转换函数演化。
 
-Collectively, these constraints are known as the _algebraic intermediate representation_, or _AIR_. Advanced STARKs may define more constraint types in order to deal with memory or with consistency of registers within one cycle.
+这些约束统称为_代数中间表示_或_AIR_。 高级 STARKs 可以定义更多的约束类型，以便在一个周期内处理内存或寄存器的一致性。
 
-### Interpolation and Polynomial IOPs
+### 插值和多项式 IOPs
 
-Interpolation in the usual sense means finding a polynomial that passes through a set of data points. In the context of the STARK compilation pipeline, _interpolation_ means finding a representation of the arithmetic constraint system in terms of polynomials. The resulting object is not an arithmetic constraint system but an abstract protocol called a _Polynomial IOP_.
+通常意义上的插值意味着找到一个通过一组数据点的特定多项式。 在 STARK 编译过程中， _插值_ 意味着找到算术约束系统的多项式表示。 结果的对象不是一个算术约束系统，而是一个叫做 _多项式 IOP_ 的抽象协议。
 
-The prover in a regular proof system sends messages to the verifier. But what happens when the verifier is not allowed to read them? Specifically, if the messages from the prover are replaced by oracles, abstract black-box functionalities that the verifier can query in points of his choosing, the protocol is an _interactive oracle proof (IOP)_. When the oracles correspond to polynomials of low degree, it is a _Polynomial IOP_. The intuition is that the honest prover obtains a polynomial constraint system whose equations hold, and that the cheating prover must use a constraint system where at least one equation is false. When polynomials are equal, they are equal everywhere, and in particular in random points of the verifier's choosing. But when polynomials are unequal, they are unequal _almost_ everywhere, and this inequality is exposed with high probability when the verifier probes the left and right hand sides in a random point.
+常规证明系统中证明人向验证人发送信息。 但是，如果不允许验证人读取该信息，会发生什么情况？ 具体而言，如果证明人的信息被预言机所取代，则验证人可以在他所选择的点中查询抽象的黑盒函数，这便是是 _交互式预言机证明(IOP)_。 当预言机对应于低次多项式时，这便是 _多项式 IOP_。 直观的意思是，诚实的证明人获得多项式约束系统，其中方程组是成立的。 而作恶的证明人其多项式约束系统中使用至少存在一个错误的方程。 两个多项式相等时，它们在任何点都是相同的，特别是在验证人选择的随机点上。 但是当多项式不相等时，它们_几乎_处处不相等，并且当验证人在随机点中探测左右侧时，这种不相等很可能会暴露出来。
 
-The STARK proof system interpolates the algebraic execution trace literally -- that is to say, it finds $\mathsf{w}$ polynomials $t_i(X)$ such that the values $t_i(X)$ takes on a domain $D$ correspond to the algebraic execution trace of the $i$th register. These polynomials are sent as oracles to the verifier. At this point the AIR constraints give rise to operations on polynomials that send low-degree polynomials to low-degree polynomials only if the constraints are satisfied. The verifier simulates these operations and can thus derive new polynomials whose low degree certifies the satisfiability of the constraint system, and thus the integrity of the computation. In other words, the interpolation step reduces the satisfiability of an arithmetic constraint system to a claim about the low degree of certain polynomials.
+STARK 证明系统从字面上插入代数执行轨迹——也就是说，它找到了 $\mathsf{w}$ 多项式 $t_i(X)$ 使得值 $t_i(X)$ 具有域 $D$ 对应于第 $i$th 个寄存器的代数执行轨迹。 这些多项式作为预言机发送到验证人。 在这一点上，AIR（代数中间表示）的约束导致多项式运算，只有在符合约束的情况下才能将低次多项式发送到低次多项式。 验证人模拟这些操作，因此可以推导出新的多项式，其低幂次证明了约束系统的可满足性，从而证明了计算的完整性。 换言之，插值将算术约束系统的可满足性降低为关于某些多项式的低幂次的声明。
 
-### Cryptographic Compilation with FRI
+### 使用 FRI 的密码学编译
 
-In the real world, polynomial oracles do not exist. The protocol designer who wants to use a Polynomial IOP as an intermediate stage must find a way to commit to a polynomial and then open that polynomial in a point of the verifier's choosing. FRI is a key component of a STARK proof that achieves this task by using Merkle trees of Reed-Solomon Codewords to prove the boundedness of a polynomial's degree.
+现实中，多项式预言机并不存在。 想要使用多项式 IOP 作为中间阶段的协议设计者必须找到一种方法来提交多项式，然后在验证人选择的点打开该多项式。 FRI 是 STARK 证明的关键组成部分，它通过使用 Reed-Solomon 码字的 Merkle 树来证明多项式次数的有界性，从而实现了这一任务。
 
-The Reed-Solomon codeword associated with a polynomial $f(X) \in \mathbb{F}[X]$ is the list of values it takes on a given domain $D \subset \mathbb{F}$. Consider without loss of generality domains $D$ whose cardinality is larger than the maximum allowable degree for polynomials. These values can be put into a Merkle tree, in which case the root represents a commitment to the polynomial. The _Fast Reed-Solomon IOP of Proximity (FRI)_ is a protocol whose prover sends a sequence of Merkle roots corresponding to codewords whose lengths halve in every iteration. The verifier inspects the Merkle trees (specifically: asks the prover to provide the indicated leafs with their authentication paths) of consecutive rounds to test a simple linear relation. For honest provers, the degree of the represented polynomials likewise halves in each round, and is thus much smaller than the length of the codeword. However for malicious provers this degree is one less than the length of the codeword. In the last step, the prover sends a non-trivial codeword corresponding to a constant polynomial.
+与多项式 $f(X)\in\mathbb{F}[X]$ 相关的 Reed-Solomon 码字是它在给定域 $D\subset\mathbb{F}$ 上所取值的列表。 不考虑一般域$D$的损失，其基数大于多项式的最大允许次数。 这些值可以放入 Merkle 树中，在这种情况下，根代表对多项式的承诺。 _快速近似 Reed-Solomon IOP (FRI)_ 是一种协议，它的证明者发送一个 Merkle 根序列，该序列对应于在每次迭代中长度减半的码字。 验证人检查连续轮次的默克尔树（特别是：要求证明人提供指示的叶子节点及其认证路径）以测试简单的线性关系。 对于诚实的证明人而言，所表示的多项式的次数同样在每一轮中减半，因此远小于码字的长度。 然而对于恶意证明人来说，这个幂次数比码字的长度小一。 在最后一步中，证明人发送一个与常数多项式相对应的重要码字。
 
-There is a minor issue the above description does not capture: how does the verifier query a committed polynomial $f(X)$ in a point $z$ that does not belong to the domain? In principle, there is an obvious and straightforward solution: the verifier sends $z$ to the prover, and the prover responds by sending $y=f(z)$. The polynomial $f(X) - y$ has a zero in $X=z$ and so must be divisible by $X-z$. So both prover and verifier have access to a new low degree polynomial, $\frac{f(X) - y}{X-z}$. If the prover was lying about $f(z)=y$, then he is incapable of proving the low degree of $\frac{f(X) - y}{X-z}$, and so his fraud will be exposed in the course of the FRI protocol. This is in fact the exact mechanism that enforces the boundary constraints; a slightly more involved but similar construction enforces the transition constraints. The new polynomials are the result of dividing out known factors, so they will be called _quotients_ and denoted $q_i(X)$.
+上面的描述没有捕捉到一个小问题：验证者如何在不属于域的点 $z$ 中查询提交的多项式 $f(X)$？ 原则上有一个明显而直接的解决方案：验证人向证明人发送 $z$，证明人通过发送 $y=f(z)$ 来响应。 多项式 $f(X) - y$ 在 $X=z$ 中为零，因此必须能被 $X-z$ 整除。 因此证明人和验证人都可以访问一个新的低次多项式 $\frac{f(X) - y}{X-z}$。 如果证明者在 $f(z)=y$ 上准备做恶，那么他就无法证明 $\frac{f(X) - y}{X-z}$ 的低幂次，因此他的做恶行为将会暴露在 FRI 协议的过程。 这实际上是强制边界约束的确切机制； 一个稍微复杂但类似的构造会强制转换约束。 新的多项式是除以已知因子的结果，因此它们将被称为_商_并表示为 $q_i(X)$。
 
-At this point the Polynomial IOP has been compiled into an interactive concrete proof system. In principle, the protocol could be executed. However, it pays to do one more step of cryptographic compilation: replace the verifier's random coins (AKA. _randomness_) by something pseudorandom -- but deterministic. This is exactly the Fiat-Shamir transform, and the result is the non-interactive proof known as the STARK.
+至此，多项式 IOP 已编译为交互式具体证明系统。 原则上协议可以执行。 然而，多增加一个密码学编译步骤是值得的：用伪随机的东西替换验证人的随机数（即 _随机性_）——但这种操作是具有确定性的。  这正是 Fiat-Shamir 变换，其结果是称为 STARK 的非交互式证明。
 
-![The STARK proof system revolves around the transformation of low-degree polynomials into new polynomials whose degree boundedness matches with the integrity of the computation.](./../../graphics/stark-overview.svg "Overview of the compilation pipeline for STARKs")
+![STARK 证明系统围绕着将低阶多项式转换为幂次有界与计算完整性相匹配的新多项式。](./../../graphics/stark-overview.svg "SNARKs 编译过程概述")
 
-This description glosses over many details. The remainder of this tutorial will explain the construction in more concrete and tangible terms, and will insert more fine-grained components into the diagram.
+这样描述并没有披露许多细节。 本教程的其余部分将以更具体和有形的术语解释构造，并将在图中插入更具有细粒度的组件。
 
 [0](index) - **1** - [2](basic-tools) - [3](fri) - [4](stark) - [5](rescue-prime) - [6](faster)
 
 [^1]: 另外，代数 _内部_ 表示。
-[^2]: Note that FRI is defined in terms of abstract oracles which can be queried in arbitrary locations; a FRI protocol can thus be compiled into a concrete protocol by simulating the oracles with any cryptographic vector commitment scheme. Merkle trees provide this functionality but are not the only cryptographic primitive to do it.
-[^3]: Formally, _knowledge_ is defines as follows: an extractor algorithm must exist which has oracle access to a possibly-malicious prover, pretends to be the matching verifier (and in particular reads the messages coming from the prover and sends its own via the same interface), has the power to rewind the possibly-malicious prover to any earlier point in time, runs in polynomial time, and outputs the witness. STARKs have been shown to satisfy this property, see section 5 of the [EthSTARK documentation](https://eprint.iacr.org/2021/582.pdf).
+[^2]: 请注意，FRI 是根据可以在任意位置查询的抽象预言机定义的； 因此，可以通过使用任何密码学向量承诺方案模拟预言机，将 FRI 协议编译为具体协议。 Merkle 树提供了此功能，但不是唯一的密码学原语。
+[^3]: 形式上，_知识的_ 定义如下：必须存在一个提取器算法，它可以访问可能做恶的证明人，伪装成匹配的验证者（特别是读取来自证明人的消息并通过相同的接口发送它自己的信息），有能力将可能做恶证明人倒回到任何更早的时间点，在多项式时间内运行，并输出见证。 STARKs 已被证明满足此属性，请参阅 [EthSTARK 文档](https://eprint.iacr.org/2021/582.pdf)的第 5 节。

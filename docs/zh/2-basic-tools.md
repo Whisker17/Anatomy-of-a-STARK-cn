@@ -1,6 +1,6 @@
-# Anatomy of a STARK, Part 2: Basic Tools
+# STARK 详解 第 2 部分：基本工具
 
-## Finite Field Arithmetic
+## 有限域算术
 
 [Finite field](https://en.wikipedia.org/wiki/Finite_field)s are ubiquitous throughout cryptography because they are natively compatible with computers. For instance, they cannot generate overflow or underflow errors, and their elements have a finite representation in terms of bits.
 
